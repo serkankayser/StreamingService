@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.db.models.signals import pre_save
 from django.utils import timezone
@@ -5,6 +6,8 @@ from streaming_service.db.models import PublishStateOptions
 from streaming_service.db.receivers import publish_state_pre_save, slugify_pre_save
 from videos.models import Video
 from categories.models import Category
+from tags.models import TaggedItem
+
 
 class PlaylistQuerySet(models.QuerySet):
     def published(self):
@@ -68,6 +71,7 @@ class Playlist(models.Model):
         blank=True,
         null=True
     )
+    tags = GenericRelation(TaggedItem, related_query_name='playlist')
 
     objects = PlaylistManager()
 
