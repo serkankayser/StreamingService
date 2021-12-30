@@ -24,8 +24,13 @@ class PlaylistManager(models.Manager):
     def get_queryset(self):
         return PlaylistQuerySet(self.model, using=self._db)
 
-    def publised(self):
-        self.get_queryset().published()
+    def published(self):
+        return self.get_queryset().published()
+
+    def featured_playlists(self):
+        return self.get_queryset().filter(
+            type=Playlist.PlaylistTypeChoices.PLAYLIST
+        )
 
 
 class Playlist(models.Model):
@@ -81,6 +86,9 @@ class Playlist(models.Model):
     def timestamp(self):
         return None
 
+    def __str__(self):
+        return self.title
+
     def get_rating_avg(self):
         return Playlist.objects.filter(id=self.id).aggregate(
             Avg('ratings__value')
@@ -92,16 +100,12 @@ class Playlist(models.Model):
             min=Min('ratings__value'),
         )
 
-    def __str__(self):
-        return self.title
+    def get_short_display(self):
+        return ""
 
     @property
     def is_published(self):
         return self.active
-
-
-pre_save.connect(publish_state_pre_save, sender=Playlist)
-pre_save.connect(slugify_pre_save, sender=Playlist)
 
 
 class TVShowProxyManager(PlaylistManager):
@@ -120,6 +124,13 @@ class TVShowProxy(Playlist):
     def save(self, *args, **kwargs):
         self.type = Playlist.PlaylistTypeChoices.SHOW
         super().save(*args, **kwargs)
+
+    @property
+    def seasons(self):
+        return self.playlist_set.published()
+
+    def get_short_display(self):
+        return f"- {self.seasons.count()} Seasons"
 
 
 class TVShowSeasonProxyManager(PlaylistManager):
@@ -166,3 +177,16 @@ class MovieProxy(Playlist):
     def save(self, *args, **kwargs):
         self.type = Playlist.PlaylistTypeChoices.MOVIE
         super().save(*args, **kwargs)
+
+
+pre_save.connect(publish_state_pre_save, sender=TVShowProxy)
+pre_save.connect(slugify_pre_save, sender=TVShowProxy)
+
+pre_save.connect(publish_state_pre_save, sender=MovieProxy)
+pre_save.connect(slugify_pre_save, sender=MovieProxy)
+
+pre_save.connect(publish_state_pre_save, sender=TVShowSeasonProxy)
+pre_save.connect(slugify_pre_save, sender=TVShowSeasonProxy)
+
+pre_save.connect(publish_state_pre_save, sender=Playlist)
+pre_save.connect(slugify_pre_save, sender=Playlist)
